@@ -313,4 +313,66 @@ public class PathMatchingFilterChainResolverTest extends WebTest {
         assertThrows(IllegalStateException.class,
                 () -> resolver.getChain(request, response, chain));
     }
+
+    @Test
+    void testRepeatedEncodingFailsClosed() {
+        HttpServletRequest request = mock(HttpServletRequest.class);
+        HttpServletResponse response = mock(HttpServletResponse.class);
+        FilterChain chain = mock(FilterChain.class);
+
+        resolver.getFilterChainManager().createChain("/public/**", "anon");
+        resolver.getFilterChainManager().createChain("/protected/**", "authc");
+
+        when(request.getServletPath()).thenReturn("");
+        when(request.getPathInfo()).thenReturn("/public/%252e%252e/protected/secret");
+
+        assertThrows(IllegalStateException.class,
+                () -> resolver.getChain(request, response, chain));
+    }
+
+    @Test
+    void testSingleEncodedTraversalResolvesCanonicalPath() {
+        HttpServletRequest request = mock(HttpServletRequest.class);
+        HttpServletResponse response = mock(HttpServletResponse.class);
+        FilterChain chain = mock(FilterChain.class);
+
+        resolver.getFilterChainManager().createChain("/public/**", "anon");
+        resolver.getFilterChainManager().createChain("/protected/**", "authc");
+
+        when(request.getServletPath()).thenReturn("");
+        when(request.getPathInfo()).thenReturn("/public/%2e%2e/protected/secret");
+
+        FilterChain resolved = resolver.getChain(request, response, chain);
+        assertThat(resolved).isNotNull();
+    }
+
+    @Test
+    void testResolvesBackslashAndDuplicateSlashPaths() {
+        HttpServletRequest request = mock(HttpServletRequest.class);
+        HttpServletResponse response = mock(HttpServletResponse.class);
+        FilterChain chain = mock(FilterChain.class);
+
+        resolver.getFilterChainManager().createChain("/resource/book", "authcBasic");
+
+        when(request.getServletPath()).thenReturn("");
+        when(request.getPathInfo()).thenReturn("/resource\\\\book//");
+
+        FilterChain resolved = resolver.getChain(request, response, chain);
+        assertThat(resolved).isNotNull();
+    }
+
+    @Test
+    void testResolvesNormalPaths() {
+        HttpServletRequest request = mock(HttpServletRequest.class);
+        HttpServletResponse response = mock(HttpServletResponse.class);
+        FilterChain chain = mock(FilterChain.class);
+
+        resolver.getFilterChainManager().createChain("/resource/**", "authcBasic");
+
+        when(request.getServletPath()).thenReturn("/resource");
+        when(request.getPathInfo()).thenReturn("/book");
+
+        FilterChain resolved = resolver.getChain(request, response, chain);
+        assertThat(resolved).isNotNull();
+    }
 }

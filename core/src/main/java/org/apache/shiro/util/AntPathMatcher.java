@@ -130,6 +130,7 @@ public class AntPathMatcher implements PatternMatcher {
     @SuppressWarnings({"checkstyle:ReturnCount", "checkstyle:CyclomaticComplexity",
             "checkstyle:NPathComplexity", "checkstyle:MethodLength"})
     protected boolean doMatch(String pattern, String path, boolean fullMatch) {
+        path = PathNormalizer.normalizeForMatch(path);
         if (path == null || path.startsWith(this.pathSeparator) != pattern.startsWith(this.pathSeparator)) {
             return false;
         }

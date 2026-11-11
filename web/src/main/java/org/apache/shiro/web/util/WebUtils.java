@@ -23,6 +23,7 @@ import org.apache.shiro.session.Session;
 import org.apache.shiro.subject.Subject;
 import org.apache.shiro.subject.support.DefaultSubjectContext;
 import org.apache.shiro.lang.util.StringUtils;
+import org.apache.shiro.util.PathNormalizer;
 import org.apache.shiro.web.env.EnvironmentLoader;
 import org.apache.shiro.web.env.WebEnvironment;
 import org.apache.shiro.web.filter.AccessControlFilter;
@@ -122,7 +123,14 @@ public final class WebUtils {
      * filter chain.
      */
     public static String getPathWithinApplication(HttpServletRequest request) {
-        String path = normalize(removeSemicolon(getServletPath(request) + getPathInfo(request)));
+        String path;
+        try {
+            path = PathNormalizer.normalize(removeSemicolon(getServletPath(request) + getPathInfo(request)));
+        } catch (PathNormalizer.PathNormalizationException e) {
+            String servletPath = getServletPath(request);
+            String pathInfo = getPathInfo(request);
+            throw new IllegalStateException("Unable to normalize path: " + servletPath + pathInfo, e);
+        }
         if (path == null || path.isEmpty()) {
             String servletPath = getServletPath(request);
             String pathInfo = getPathInfo(request);

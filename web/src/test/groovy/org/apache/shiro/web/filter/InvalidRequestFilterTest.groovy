@@ -137,6 +137,32 @@ class InvalidRequestFilterTest {
     }
 
     @Test
+    void testBlocksRepeatedEncoding() {
+        InvalidRequestFilter filter = new InvalidRequestFilter()
+        assertPathBlocked(filter, "/%252e%252e%252fadmin")
+        assertPathBlocked(filter, "/%252e%252e/admin")
+        assertPathBlocked(filter, "/%252fadmin")
+        assertPathBlocked(filter, "/%255cadmin")
+        assertPathBlocked(filter, "/%253badmin")
+        assertPathBlocked(filter, "/%252E%252E")
+        assertPathBlocked(filter, "%252E./")
+
+        assertPathAllowed(filter, "/admin/users")
+        assertPathAllowed(filter, "/admin//users")
+        assertPathAllowed(filter, "/admin/users/")
+    }
+
+    @Test
+    void testBlocksBackslashTraversalSegments() {
+        InvalidRequestFilter filter = new InvalidRequestFilter()
+        assertPathBlocked(filter, "/something\\..\\admin")
+
+        filter.setBlockBackslash(false)
+        assertPathBlocked(filter, "/something\\..\\admin")
+        assertPathAllowed(filter, "/something\\admin")
+    }
+
+    @Test
     void testFilterAllowsBackslash() {
         InvalidRequestFilter filter = new InvalidRequestFilter()
         filter.setBlockBackslash(false)

@@ -355,4 +355,28 @@ class AntPathMatcherTests {
         assertThat(pathMatcher.match("/TEST/PATH/*", "/test/path/extra")).isTrue();
         assertThat(pathMatcher.match("/TEST/PATH", "/different/path")).isFalse();
     }
+
+    @Test
+    void normalizesRequestPathsBeforeMatching() {
+        assertThat(pathMatcher.match("/admin/**", "/public/../admin/user")).isTrue();
+        assertThat(pathMatcher.match("/admin/**", "/public/%2e%2e/admin/user")).isTrue();
+        assertThat(pathMatcher.match("/admin/**", "//admin//user")).isTrue();
+        assertThat(pathMatcher.match("/admin/**", "/admin\\user")).isTrue();
+        assertThat(pathMatcher.match("/admin/**", "/admin/user")).isTrue();
+        assertThat(pathMatcher.match("/admin/**", "/public/admin/user")).isFalse();
+    }
+
+    @Test
+    void rejectsAmbiguousEncodedPaths() {
+        assertThat(pathMatcher.match("/admin/**", "/public/%252e%252e/admin/user")).isFalse();
+        assertThat(pathMatcher.match("/public/**", "/public/%252e%252e/admin")).isFalse();
+        assertThat(pathMatcher.match("/admin/**", "/public/%255cadmin")).isFalse();
+    }
+
+    @Test
+    void preservesCaseConfigurationWithNormalizedPaths() {
+        pathMatcher.setCaseInsensitive(false);
+        assertThat(pathMatcher.match("/Admin/**", "//admin//user")).isFalse();
+        assertThat(pathMatcher.match("/Admin/**", "//Admin//User")).isTrue();
+    }
 }

@@ -20,6 +20,7 @@
 package org.apache.shiro.web.filter;
 
 import org.apache.shiro.lang.util.StringUtils;
+import org.apache.shiro.util.PathNormalizer;
 import org.apache.shiro.web.util.WebUtils;
 
 import jakarta.servlet.ServletRequest;
@@ -83,10 +84,13 @@ public class InvalidRequestFilter extends AccessControlFilter {
     }
 
     private boolean isValid(String uri) {
-        return !StringUtils.hasText(uri)
-                || (!containsSemicolon(uri)
+        if (!StringUtils.hasText(uri)) {
+            return true;
+        }
+        return !containsSemicolon(uri)
                 && !containsBackslash(uri)
-                && !containsNonAsciiCharacters(uri))
+                && !containsNonAsciiCharacters(uri)
+                && !containsAmbiguousEncoding(uri)
                 && !containsTraversal(uri);
     }
 
@@ -128,14 +132,18 @@ public class InvalidRequestFilter extends AccessControlFilter {
         return true;
     }
 
+    private boolean containsAmbiguousEncoding(String uri) {
+        return PathNormalizer.isAmbiguous(uri);
+    }
+
     private boolean containsTraversal(String uri) {
         if (pathTraversalBlockMode == PathTraversalBlockMode.NORMAL) {
-            return !(isNormalized(uri));
+            return PathNormalizer.hasDotSegments(uri);
         }
         if (pathTraversalBlockMode == PathTraversalBlockMode.STRICT) {
-            return !(isNormalized(uri)
-                    && PERIOD.stream().noneMatch(uri::contains)
-                    && FORWARDSLASH.stream().noneMatch(uri::contains));
+            return PathNormalizer.hasDotSegments(uri)
+                    || PERIOD.stream().anyMatch(uri::contains)
+                    || FORWARDSLASH.stream().anyMatch(uri::contains);
         }
         return false;
     }
